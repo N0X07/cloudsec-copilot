@@ -149,6 +149,15 @@ the production container. It uses read-only repository permissions and never
 receives an OpenAI API key; the Agent loop is tested with a deterministic fake
 client instead of making paid external calls.
 
+## AWS deployment template
+
+[`infra/terraform`](infra/terraform) contains a cost-aware ECS Fargate, ALB,
+private RDS PostgreSQL, ECR, Secrets Manager, IAM, and CloudWatch deployment.
+Database credentials are generated and managed by RDS instead of entering
+Terraform variables. The OpenAI key is optional and referenced only by the ARN
+of a separately created secret. See the infrastructure README for the two-stage
+image bootstrap, cost warning, TLS option, and teardown procedure.
+
 ## Security principles
 
 - Deterministic rules remain the source of truth for the initial detections.
@@ -185,7 +194,9 @@ unapproved cloud actions.
 
 The ingestion API, database models, five detection rules, incident persistence,
 structured reports, bounded AI analyst, audit trail, approval workflow, Docker
-configuration, and API tests are implemented. All five rules have been verified
-against 18 labeled events using dependency-free unit tests. Full API,
-PostgreSQL, and live-model integration tests remain pending until the Python
-dependencies, container images, and optional API key are available locally.
+configuration, CI, AWS Terraform template, and API tests are implemented. All
+five rules have been verified against 18 labeled events; Agent policy and
+infrastructure security invariants also have dependency-free tests. Full API,
+PostgreSQL, Terraform-provider, and live-model integration tests remain pending
+until remote CI or an unrestricted local environment is available. No AWS
+resources have been created by this repository.

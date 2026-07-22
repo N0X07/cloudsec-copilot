@@ -29,6 +29,9 @@ jobs:
       - name: Validate labeled security dataset
         run: python scripts/validate_dataset.py
 
+      - name: Validate infrastructure security invariants
+        run: python scripts/validate_infrastructure.py
+
       - name: Run tests
         run: python -m pytest
 
@@ -37,3 +40,13 @@ jobs:
 
       - name: Build production container
         run: docker build --tag cloudsec-copilot:ci .
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Validate Terraform
+        working-directory: infra/terraform
+        run: |
+          terraform fmt -check
+          terraform init -backend=false
+          terraform validate
