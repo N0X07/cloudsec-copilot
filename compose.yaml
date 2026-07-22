@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cloudsec
+      POSTGRES_USER: cloudsec
+      POSTGRES_PASSWORD: cloudsec-local-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudsec -d cloudsec"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://cloudsec:cloudsec-local-only@db:5432/cloudsec
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+

@@ -1,0 +1,2 @@
+"""CloudSec Copilot application package."""
+

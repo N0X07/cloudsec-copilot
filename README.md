@@ -61,6 +61,60 @@ The local MVP will run with FastAPI, PostgreSQL, and Docker Compose. AWS
 deployment, Terraform, CI/CD, and cloud monitoring will be added only after the
 local detection and evaluation pipeline is reliable.
 
+## Implemented local API
+
+The current backend includes:
+
+- Idempotent import of CloudTrail-style `Records` envelopes
+- Normalized event fields plus retention of the original JSON event
+- Event listing and lookup endpoints
+- Deterministic detection rule `AWS-IAM-001`
+- Idempotent incident creation with evidence and human-approval metadata
+- PostgreSQL runtime configuration and temporary SQLite test databases
+
+### Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Service health and environment |
+| `POST` | `/api/v1/events/import` | Validate and import a CloudTrail envelope |
+| `GET` | `/api/v1/events` | List stored events |
+| `GET` | `/api/v1/events/{event_id}` | Retrieve one event |
+| `POST` | `/api/v1/events/{event_id}/analyze` | Run deterministic detection |
+| `GET` | `/api/v1/incidents` | List generated incidents |
+
+## Local development
+
+Python 3.12 or newer is required.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+The API is available at `http://localhost:8000`, with interactive documentation
+at `http://localhost:8000/docs`. Without `DATABASE_URL`, local development uses
+`sqlite:///./cloudsec.db`.
+
+Validate the labeled dataset without third-party dependencies:
+
+```powershell
+python scripts/validate_dataset.py
+```
+
+## Docker Compose
+
+Start the API and PostgreSQL together:
+
+```powershell
+docker compose up --build
+```
+
+The Compose password is intentionally development-only. Production secrets must
+come from a managed secret store and must never be committed.
+
 ## Security principles
 
 - Deterministic rules remain the source of truth for the initial detections.
@@ -75,9 +129,9 @@ local detection and evaluation pipeline is reliable.
 
 - [x] Define project goal, MVP boundary, and security principles.
 - [x] Create and label synthetic CloudTrail-style events.
-- [ ] Build the FastAPI ingestion endpoint and PostgreSQL schema.
-- [ ] Implement the first rule: root login without MFA.
-- [ ] Add automated tests for ingestion and detection.
+- [ ] Build and verify the FastAPI ingestion endpoint and PostgreSQL schema.
+- [x] Implement and verify the first rule: root login without MFA.
+- [ ] Run automated tests for ingestion and detection.
 - [ ] Add AI analyst tools and structured incident reports.
 - [ ] Add playbook retrieval and evaluation.
 - [ ] Containerize and deploy to AWS with Terraform and CI/CD.
@@ -92,5 +146,8 @@ unapproved cloud actions.
 
 ## Current status
 
-Milestones 1 and 2 are complete. The next step is to build the FastAPI ingestion
-endpoint and PostgreSQL schema for the labeled CloudTrail-style event set.
+The ingestion API, database models, first detection rule, incident persistence,
+Docker configuration, and API tests are implemented. The first rule has been
+verified against all ten labels using dependency-free unit tests. Full API and
+PostgreSQL integration tests remain pending until the Python dependencies and
+container images are available in the local environment.
