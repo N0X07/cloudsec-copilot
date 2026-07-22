@@ -68,8 +68,9 @@ The current backend includes:
 - Idempotent import of CloudTrail-style `Records` envelopes
 - Normalized event fields plus retention of the original JSON event
 - Event listing and lookup endpoints
-- Deterministic detection rule `AWS-IAM-001`
+- Five deterministic AWS security detection rules
 - Idempotent incident creation with evidence and human-approval metadata
+- Structured incident reports with MITRE ATT&CK context and response steps
 - PostgreSQL runtime configuration and temporary SQLite test databases
 
 ### Endpoints
@@ -81,7 +82,9 @@ The current backend includes:
 | `GET` | `/api/v1/events` | List stored events |
 | `GET` | `/api/v1/events/{event_id}` | Retrieve one event |
 | `POST` | `/api/v1/events/{event_id}/analyze` | Run deterministic detection |
+| `POST` | `/api/v1/events/{event_id}/analyze-all` | Run all detection rules |
 | `GET` | `/api/v1/incidents` | List generated incidents |
+| `GET` | `/api/v1/incidents/{incident_id}/report` | Build an auditable incident report |
 
 ## Local development
 
@@ -131,6 +134,8 @@ come from a managed secret store and must never be committed.
 - [x] Create and label synthetic CloudTrail-style events.
 - [ ] Build and verify the FastAPI ingestion endpoint and PostgreSQL schema.
 - [x] Implement and verify the first rule: root login without MFA.
+- [x] Expand to five labeled AWS security detection rules.
+- [x] Generate evidence-backed incident reports with ATT&CK mappings.
 - [ ] Run automated tests for ingestion and detection.
 - [ ] Add AI analyst tools and structured incident reports.
 - [ ] Add playbook retrieval and evaluation.
@@ -146,8 +151,8 @@ unapproved cloud actions.
 
 ## Current status
 
-The ingestion API, database models, first detection rule, incident persistence,
-Docker configuration, and API tests are implemented. The first rule has been
-verified against all ten labels using dependency-free unit tests. Full API and
-PostgreSQL integration tests remain pending until the Python dependencies and
-container images are available in the local environment.
+The ingestion API, database models, five detection rules, incident persistence,
+structured reports, Docker configuration, and API tests are implemented. All
+five rules have been verified against 18 labeled events using dependency-free
+unit tests. Full API and PostgreSQL integration tests remain pending until the
+Python dependencies and container images are available locally.

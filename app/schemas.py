@@ -66,6 +66,12 @@ class DetectionResponse(BaseModel):
     evidence: list[str] = Field(default_factory=list)
 
 
+class EventAnalysisResponse(BaseModel):
+    event_id: str
+    matched_rules: int
+    findings: list[DetectionResponse]
+
+
 class IncidentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -84,3 +90,19 @@ class HealthResponse(BaseModel):
     status: str
     environment: str
 
+
+class IncidentReportResponse(BaseModel):
+    incident_id: str
+    event_id: str
+    title: str
+    severity: str
+    status: str
+    summary: str
+    observed_at: datetime
+    actor_arn: str | None
+    source_ip: str | None
+    evidence: list[str]
+    attack_techniques: list[str]
+    recommended_actions: list[str]
+    requires_human_approval: bool
+    remediation_state: str

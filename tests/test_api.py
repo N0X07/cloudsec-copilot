@@ -106,3 +106,36 @@ def test_analyze_unknown_event_returns_not_found(client: TestClient) -> None:
 
     assert response.status_code == 404
 
+
+def test_all_rules_and_incident_report(
+    client: TestClient, additional_events: dict, additional_event_labels: dict
+) -> None:
+    imported = client.post("/api/v1/events/import", json=additional_events)
+    assert imported.status_code == 201
+
+    incident_ids: list[str] = []
+    for label in additional_event_labels["labels"]:
+        response = client.post(
+            f"/api/v1/events/{label['eventID']}/analyze-all"
+        )
+        assert response.status_code == 200
+        assert [
+            finding["rule_id"] for finding in response.json()["findings"]
+        ] == label["expectedRuleIds"]
+        incident_ids.extend(
+            finding["incident_id"] for finding in response.json()["findings"]
+        )
+
+    assert len(incident_ids) == 4
+    report = client.get(f"/api/v1/incidents/{incident_ids[0]}/report")
+    assert report.status_code == 200
+    assert report.json()["evidence"]
+    assert report.json()["attack_techniques"]
+    assert report.json()["recommended_actions"]
+    assert report.json()["remediation_state"] == "awaiting_human_approval"
+
+
+def test_report_for_unknown_incident_returns_not_found(client: TestClient) -> None:
+    response = client.get("/api/v1/incidents/does-not-exist/report")
+
+    assert response.status_code == 404

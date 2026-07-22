@@ -82,3 +82,8 @@ def list_incidents(session: Session, *, offset: int, limit: int) -> list[Inciden
     )
     return list(session.scalars(statement))
 
+
+def get_incident(session: Session, incident_id: str) -> Incident | None:
+    return session.scalar(
+        select(Incident).where(Incident.incident_id == incident_id)
+    )

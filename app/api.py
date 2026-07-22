@@ -5,9 +5,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.detection import analyze_event
+from app.detection import analyze_event, analyze_event_all
 from app.repositories import (
     get_event,
+    get_incident,
     import_events,
     list_events,
     list_incidents,
@@ -17,10 +18,13 @@ from app.schemas import (
     DetectionResponse,
     EventImportResult,
     EventRead,
+    EventAnalysisResponse,
     HealthResponse,
     IncidentRead,
+    IncidentReportResponse,
 )
 from app.rules import ROOT_LOGIN_WITHOUT_MFA_RULE_ID
+from app.reporting import build_incident_report
 
 
 router = APIRouter()
@@ -104,6 +108,37 @@ def analyze_event_by_id(event_id: str, session: SessionDependency) -> DetectionR
     )
 
 
+@router.post(
+    "/api/v1/events/{event_id}/analyze-all",
+    response_model=EventAnalysisResponse,
+    tags=["detection"],
+)
+def analyze_event_with_all_rules(
+    event_id: str, session: SessionDependency
+) -> EventAnalysisResponse:
+    event = get_event(session, event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    results = analyze_event_all(session, event)
+    findings = [
+        DetectionResponse(
+            event_id=event_id,
+            matched=True,
+            rule_id=finding.rule_id,
+            incident_id=incident.incident_id,
+            severity=finding.severity,
+            evidence=finding.evidence,
+        )
+        for finding, incident in results
+    ]
+    return EventAnalysisResponse(
+        event_id=event_id,
+        matched_rules=len(findings),
+        findings=findings,
+    )
+
+
 @router.get(
     "/api/v1/incidents", response_model=list[IncidentRead], tags=["incidents"]
 )
@@ -116,3 +151,25 @@ def get_incidents(
         IncidentRead.model_validate(item)
         for item in list_incidents(session, offset=offset, limit=limit)
     ]
+
+
+@router.get(
+    "/api/v1/incidents/{incident_id}/report",
+    response_model=IncidentReportResponse,
+    tags=["incidents"],
+)
+def get_incident_report(
+    incident_id: str, session: SessionDependency
+) -> IncidentReportResponse:
+    incident = get_incident(session, incident_id)
+    if incident is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
+    event = get_event(session, incident.event_id)
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Incident event is missing",
+        )
+    return build_incident_report(incident, event)

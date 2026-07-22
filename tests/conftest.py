@@ -31,6 +31,22 @@ def event_labels() -> dict:
 
 
 @pytest.fixture
+def additional_events() -> dict:
+    with (PROJECT_ROOT / "data" / "additional_security_events.json").open(
+        encoding="utf-8"
+    ) as file:
+        return json.load(file)
+
+
+@pytest.fixture
+def additional_event_labels() -> dict:
+    with (PROJECT_ROOT / "data" / "additional_security_event_labels.json").open(
+        encoding="utf-8"
+    ) as file:
+        return json.load(file)
+
+
+@pytest.fixture
 def client(tmp_path: Path) -> Generator[TestClient, None, None]:
     database_path = (tmp_path / "cloudsec-test.db").as_posix()
     app = create_app(
@@ -38,4 +54,3 @@ def client(tmp_path: Path) -> Generator[TestClient, None, None]:
     )
     with TestClient(app) as test_client:
         yield test_client
-

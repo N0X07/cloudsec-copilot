@@ -11,6 +11,10 @@ use documentation-only values.
   envelope.
 - `root_login_without_mfa_labels.json`: expected result and rationale for every
   event under the first detection rule.
+- `additional_security_events.json`: eight positive and negative CloudTrail-style
+  events covering four additional security scenarios.
+- `additional_security_event_labels.json`: expected rule IDs and rationale for
+  every event in the additional dataset.
 
 ## First detection rule
 
@@ -28,7 +32,7 @@ checking only one or two fields.
 
 ## Expected distribution
 
-- Total events: 10
-- Positive events: 2
-- Negative events: 8
-
+- Total events: 18
+- Positive events: 6
+- Negative events: 12
+- Detection rules: 5

@@ -7,6 +7,7 @@ import unittest
 from app.rules import (
     ROOT_LOGIN_WITHOUT_MFA_RULE_ID,
     detect_root_login_without_mfa,
+    run_detection_rules,
 )
 
 
@@ -60,6 +61,52 @@ class RootLoginWithoutMfaRuleTests(unittest.TestCase):
         self.assertEqual(finding.rule_id, ROOT_LOGIN_WITHOUT_MFA_RULE_ID)
         self.assertEqual(finding.severity, "critical")
         self.assertEqual(len(finding.evidence), 5)
+
+
+class AdditionalSecurityRuleTests(unittest.TestCase):
+    def test_all_rules_match_their_ground_truth_labels(self) -> None:
+        events = json.loads(
+            (PROJECT_ROOT / "data" / "additional_security_events.json").read_text(
+                encoding="utf-8"
+            )
+        )["Records"]
+        labels = json.loads(
+            (
+                PROJECT_ROOT / "data" / "additional_security_event_labels.json"
+            ).read_text(encoding="utf-8")
+        )["labels"]
+
+        expected_by_id = {
+            label["eventID"]: label["expectedRuleIds"] for label in labels
+        }
+        actual_by_id = {
+            event["eventID"]: [
+                finding.rule_id for finding in run_detection_rules(event)
+            ]
+            for event in events
+        }
+
+        self.assertEqual(actual_by_id, expected_by_id)
+        self.assertEqual(sum(bool(rule_ids) for rule_ids in actual_by_id.values()), 4)
+
+    def test_every_finding_contains_response_context(self) -> None:
+        events = json.loads(
+            (PROJECT_ROOT / "data" / "additional_security_events.json").read_text(
+                encoding="utf-8"
+            )
+        )["Records"]
+
+        findings = [
+            finding
+            for event in events
+            for finding in run_detection_rules(event)
+        ]
+
+        self.assertEqual(len(findings), 4)
+        for finding in findings:
+            self.assertTrue(finding.evidence)
+            self.assertTrue(finding.attack_techniques)
+            self.assertGreaterEqual(len(finding.recommended_actions), 2)
 
 
 if __name__ == "__main__":
