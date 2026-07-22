@@ -139,3 +139,40 @@ def test_report_for_unknown_incident_returns_not_found(client: TestClient) -> No
     response = client.get("/api/v1/incidents/does-not-exist/report")
 
     assert response.status_code == 404
+
+
+def test_human_approval_is_recorded_without_remediation(
+    client: TestClient, sample_events: dict
+) -> None:
+    client.post("/api/v1/events/import", json=sample_events)
+    positive_event_id = "00000000-0000-4000-8000-000000000003"
+    analysis = client.post(
+        f"/api/v1/events/{positive_event_id}/analyze-all"
+    ).json()
+    incident_id = analysis["findings"][0]["incident_id"]
+
+    approval = client.post(
+        f"/api/v1/incidents/{incident_id}/approval",
+        json={
+            "decision": "approve",
+            "decided_by": "portfolio-reviewer",
+            "rationale": "Authorized recovery action after evidence review.",
+        },
+    )
+    duplicate = client.post(
+        f"/api/v1/incidents/{incident_id}/approval",
+        json={
+            "decision": "reject",
+            "decided_by": "portfolio-reviewer",
+            "rationale": "This second decision must not replace the first.",
+        },
+    )
+    report = client.get(f"/api/v1/incidents/{incident_id}/report")
+    audit = client.get(f"/api/v1/incidents/{incident_id}/audit")
+
+    assert approval.status_code == 201
+    assert approval.json()["decision"] == "approve"
+    assert duplicate.status_code == 409
+    assert report.json()["remediation_state"] == "approved_not_executed"
+    assert audit.status_code == 200
+    assert audit.json()[-1]["action_type"] == "human_approval"

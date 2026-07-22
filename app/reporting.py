@@ -40,9 +40,15 @@ def build_incident_report(
         attack_techniques=attack_techniques,
         recommended_actions=recommended_actions,
         requires_human_approval=incident.requires_human_approval,
-        remediation_state=(
-            "awaiting_human_approval"
-            if incident.requires_human_approval
-            else "analysis_only"
-        ),
+        remediation_state=_remediation_state(incident),
     )
+
+
+def _remediation_state(incident: Incident) -> str:
+    if incident.requires_human_approval:
+        return "awaiting_human_approval"
+    if incident.status == "approved":
+        return "approved_not_executed"
+    if incident.status == "rejected":
+        return "rejected_no_action"
+    return "analysis_only"

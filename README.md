@@ -71,6 +71,9 @@ The current backend includes:
 - Five deterministic AWS security detection rules
 - Idempotent incident creation with evidence and human-approval metadata
 - Structured incident reports with MITRE ATT&CK context and response steps
+- Optional OpenAI Responses API analyst with two allow-listed read-only tools
+- Per-tool-call audit records, bounded agent steps, and incident-scoped access
+- One-time human approval or rejection without automatic cloud remediation
 - PostgreSQL runtime configuration and temporary SQLite test databases
 
 ### Endpoints
@@ -85,6 +88,9 @@ The current backend includes:
 | `POST` | `/api/v1/events/{event_id}/analyze-all` | Run all detection rules |
 | `GET` | `/api/v1/incidents` | List generated incidents |
 | `GET` | `/api/v1/incidents/{incident_id}/report` | Build an auditable incident report |
+| `POST` | `/api/v1/incidents/{incident_id}/agent-analysis` | Run the bounded AI analyst |
+| `GET` | `/api/v1/incidents/{incident_id}/audit` | List agent and approval audit records |
+| `POST` | `/api/v1/incidents/{incident_id}/approval` | Approve or reject proposed response work |
 
 ## Local development
 
@@ -107,6 +113,23 @@ Validate the labeled dataset without third-party dependencies:
 python scripts/validate_dataset.py
 ```
 
+The deterministic API works without an OpenAI key. To enable the optional
+agent-analysis endpoint, copy `.env.example` to `.env`, set `OPENAI_API_KEY`,
+and load those environment variables before starting the API. The default model
+is `gpt-5.6-terra` and can be changed with `OPENAI_MODEL`.
+
+## Agent safety boundary
+
+The model can call only `get_event_context` and `get_incident_report`. Both are
+read-only, validate that requested IDs belong to the active incident, and write
+their inputs, outputs, and success state to the audit table. Raw log fields are
+explicitly marked as untrusted data. The loop stops after `MAX_AGENT_STEPS`
+(default 4, hard maximum 8), and no remediation tool is exposed to the model.
+
+Human approval changes only the incident workflow state. Even an approved
+decision is reported as `approved_not_executed`; this MVP never changes AWS
+resources.
+
 ## Docker Compose
 
 Start the API and PostgreSQL together:
@@ -117,6 +140,14 @@ docker compose up --build
 
 The Compose password is intentionally development-only. Production secrets must
 come from a managed secret store and must never be committed.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` installs the project on Python 3.12, validates all
+labeled events, runs the full test suite, compiles the source tree, and builds
+the production container. It uses read-only repository permissions and never
+receives an OpenAI API key; the Agent loop is tested with a deterministic fake
+client instead of making paid external calls.
 
 ## Security principles
 
@@ -137,7 +168,8 @@ come from a managed secret store and must never be committed.
 - [x] Expand to five labeled AWS security detection rules.
 - [x] Generate evidence-backed incident reports with ATT&CK mappings.
 - [ ] Run automated tests for ingestion and detection.
-- [ ] Add AI analyst tools and structured incident reports.
+- [x] Add bounded AI analyst tools and per-call audit records.
+- [x] Add a one-time human approval/rejection workflow.
 - [ ] Add playbook retrieval and evaluation.
 - [ ] Containerize and deploy to AWS with Terraform and CI/CD.
 - [ ] Publish architecture, results, and a short demonstration video.
@@ -152,7 +184,8 @@ unapproved cloud actions.
 ## Current status
 
 The ingestion API, database models, five detection rules, incident persistence,
-structured reports, Docker configuration, and API tests are implemented. All
-five rules have been verified against 18 labeled events using dependency-free
-unit tests. Full API and PostgreSQL integration tests remain pending until the
-Python dependencies and container images are available locally.
+structured reports, bounded AI analyst, audit trail, approval workflow, Docker
+configuration, and API tests are implemented. All five rules have been verified
+against 18 labeled events using dependency-free unit tests. Full API,
+PostgreSQL, and live-model integration tests remain pending until the Python
+dependencies, container images, and optional API key are available locally.

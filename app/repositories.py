@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Incident, SecurityEvent
+from app.models import ApprovalDecision, AuditLog, Incident, SecurityEvent
 from app.schemas import CloudTrailEventIn
 
 
@@ -87,3 +89,70 @@ def get_incident(session: Session, incident_id: str) -> Incident | None:
     return session.scalar(
         select(Incident).where(Incident.incident_id == incident_id)
     )
+
+
+def create_audit_log(
+    session: Session,
+    *,
+    incident_id: str,
+    action_type: str,
+    tool_name: str | None,
+    request_payload: dict[str, Any],
+    response_payload: dict[str, Any],
+    success: bool,
+) -> AuditLog:
+    audit = AuditLog(
+        audit_id=str(uuid4()),
+        incident_id=incident_id,
+        action_type=action_type,
+        tool_name=tool_name,
+        request_payload=request_payload,
+        response_payload=response_payload,
+        success=success,
+    )
+    session.add(audit)
+    session.commit()
+    session.refresh(audit)
+    return audit
+
+
+def list_audit_logs(session: Session, incident_id: str) -> list[AuditLog]:
+    statement = (
+        select(AuditLog)
+        .where(AuditLog.incident_id == incident_id)
+        .order_by(AuditLog.created_at, AuditLog.audit_id)
+    )
+    return list(session.scalars(statement))
+
+
+def get_approval_decision(
+    session: Session, incident_id: str
+) -> ApprovalDecision | None:
+    return session.scalar(
+        select(ApprovalDecision).where(
+            ApprovalDecision.incident_id == incident_id
+        )
+    )
+
+
+def create_approval_decision(
+    session: Session,
+    *,
+    incident: Incident,
+    decision: str,
+    decided_by: str,
+    rationale: str,
+) -> ApprovalDecision:
+    approval = ApprovalDecision(
+        approval_id=str(uuid4()),
+        incident_id=incident.incident_id,
+        decision=decision,
+        decided_by=decided_by,
+        rationale=rationale,
+    )
+    incident.status = "approved" if decision == "approve" else "rejected"
+    incident.requires_human_approval = False
+    session.add(approval)
+    session.commit()
+    session.refresh(approval)
+    return approval

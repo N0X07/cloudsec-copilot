@@ -5,15 +5,28 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.agent import (
+    AgentConfigurationError,
+    AgentStepLimitError,
+    run_security_analyst,
+)
 from app.detection import analyze_event, analyze_event_all
 from app.repositories import (
+    create_approval_decision,
+    create_audit_log,
     get_event,
+    get_approval_decision,
     get_incident,
     import_events,
     list_events,
     list_incidents,
+    list_audit_logs,
 )
 from app.schemas import (
+    AgentAnalysisResponse,
+    AgentAuditItem,
+    ApprovalRequest,
+    ApprovalResponse,
     CloudTrailEnvelopeIn,
     DetectionResponse,
     EventImportResult,
@@ -173,3 +186,108 @@ def get_incident_report(
             detail="Incident event is missing",
         )
     return build_incident_report(incident, event)
+
+
+@router.post(
+    "/api/v1/incidents/{incident_id}/agent-analysis",
+    response_model=AgentAnalysisResponse,
+    tags=["agent"],
+)
+async def analyze_incident_with_agent(
+    incident_id: str, request: Request, session: SessionDependency
+) -> AgentAnalysisResponse:
+    incident = get_incident(session, incident_id)
+    if incident is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
+
+    settings = request.app.state.settings
+    try:
+        analysis, audit = await run_security_analyst(
+            session,
+            incident=incident,
+            model=settings.openai_model,
+            max_steps=settings.max_agent_steps,
+        )
+    except AgentConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)
+        ) from error
+    except AgentStepLimitError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(error)
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="OpenAI agent request failed",
+        ) from error
+
+    return AgentAnalysisResponse(
+        incident_id=incident_id,
+        model=settings.openai_model,
+        analysis=analysis,
+        audit=[AgentAuditItem.model_validate(item) for item in audit],
+    )
+
+
+@router.get(
+    "/api/v1/incidents/{incident_id}/audit",
+    response_model=list[AgentAuditItem],
+    tags=["audit"],
+)
+def get_incident_audit(
+    incident_id: str, session: SessionDependency
+) -> list[AgentAuditItem]:
+    if get_incident(session, incident_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
+    return [
+        AgentAuditItem.model_validate(item)
+        for item in list_audit_logs(session, incident_id)
+    ]
+
+
+@router.post(
+    "/api/v1/incidents/{incident_id}/approval",
+    response_model=ApprovalResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["approval"],
+)
+def decide_incident_approval(
+    incident_id: str, payload: ApprovalRequest, session: SessionDependency
+) -> ApprovalResponse:
+    incident = get_incident(session, incident_id)
+    if incident is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
+    if get_approval_decision(session, incident_id) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Incident already has an approval decision",
+        )
+
+    approval = create_approval_decision(
+        session,
+        incident=incident,
+        decision=payload.decision,
+        decided_by=payload.decided_by,
+        rationale=payload.rationale,
+    )
+    create_audit_log(
+        session,
+        incident_id=incident_id,
+        action_type="human_approval",
+        tool_name=None,
+        request_payload=payload.model_dump(),
+        response_payload={
+            "approval_id": approval.approval_id,
+            "incident_status": incident.status,
+            "remediation_executed": False,
+        },
+        success=True,
+    )
+    return ApprovalResponse.model_validate(approval)

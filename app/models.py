@@ -56,3 +56,38 @@ class Incident(Base):
 
     event: Mapped[SecurityEvent] = relationship(back_populates="incidents")
 
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    audit_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    incident_id: Mapped[str] = mapped_column(
+        ForeignKey("incidents.incident_id", ondelete="CASCADE"), index=True
+    )
+    action_type: Mapped[str] = mapped_column(String(64), index=True)
+    tool_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    request_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    response_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    success: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+
+class ApprovalDecision(Base):
+    __tablename__ = "approval_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    approval_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    incident_id: Mapped[str] = mapped_column(
+        ForeignKey("incidents.incident_id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+    decision: Mapped[str] = mapped_column(String(16), index=True)
+    decided_by: Mapped[str] = mapped_column(String(255))
+    rationale: Mapped[str] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )

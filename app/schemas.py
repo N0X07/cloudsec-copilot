@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -106,3 +106,37 @@ class IncidentReportResponse(BaseModel):
     recommended_actions: list[str]
     requires_human_approval: bool
     remediation_state: str
+
+
+class AgentAuditItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    audit_id: str
+    action_type: str
+    tool_name: str | None
+    success: bool
+    created_at: datetime
+
+
+class AgentAnalysisResponse(BaseModel):
+    incident_id: str
+    model: str
+    analysis: str
+    audit: list[AgentAuditItem]
+
+
+class ApprovalRequest(BaseModel):
+    decision: Literal["approve", "reject"]
+    decided_by: str = Field(min_length=1, max_length=255)
+    rationale: str = Field(min_length=3, max_length=2000)
+
+
+class ApprovalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    approval_id: str
+    incident_id: str
+    decision: str
+    decided_by: str
+    rationale: str
+    created_at: datetime

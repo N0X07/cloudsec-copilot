@@ -18,6 +18,9 @@ services:
     environment:
       APP_ENV: development
       DATABASE_URL: postgresql+psycopg://cloudsec:cloudsec-local-only@db:5432/cloudsec
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-terra}
+      MAX_AGENT_STEPS: ${MAX_AGENT_STEPS:-4}
     ports:
       - "8000:8000"
     depends_on:
@@ -26,4 +29,3 @@ services:
 
 volumes:
   postgres_data:
-

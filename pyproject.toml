@@ -12,6 +12,7 @@ dependencies = [
   "fastapi[standard]>=0.139.2,<0.140",
   "SQLAlchemy>=2.0.51,<2.1",
   "psycopg[binary]>=3.3.4,<3.4",
+  "openai>=2.46.0,<3",
 ]
 
 [project.optional-dependencies]
@@ -26,4 +27,3 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
-
