@@ -74,7 +74,7 @@ local detection and evaluation pipeline is reliable.
 ## Milestones
 
 - [x] Define project goal, MVP boundary, and security principles.
-- [ ] Create and label synthetic CloudTrail-style events.
+- [x] Create and label synthetic CloudTrail-style events.
 - [ ] Build the FastAPI ingestion endpoint and PostgreSQL schema.
 - [ ] Implement the first rule: root login without MFA.
 - [ ] Add automated tests for ingestion and detection.
@@ -92,6 +92,5 @@ unapproved cloud actions.
 
 ## Current status
 
-Milestone 1 is complete. The next step is to create a small, labeled event set
-containing normal activity and the first suspicious scenario.
-
+Milestones 1 and 2 are complete. The next step is to build the FastAPI ingestion
+endpoint and PostgreSQL schema for the labeled CloudTrail-style event set.
