@@ -27,7 +27,7 @@ resource "aws_db_instance" "main" {
   deletion_protection       = var.protect_data
   skip_final_snapshot       = !var.protect_data
   final_snapshot_identifier = var.protect_data ? "${local.name}-final" : null
-  apply_immediately          = true
+  apply_immediately         = true
 
   tags = { Name = local.name }
 }
