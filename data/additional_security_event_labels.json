@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0",
+  "sourceFile": "additional_security_events.json",
+  "labels": [
+    {
+      "eventID": "00000000-0000-4000-8000-000000000011",
+      "expectedRuleIds": ["AWS-LOG-001"],
+      "reason": "StopLogging disables delivery for the named CloudTrail trail."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000012",
+      "expectedRuleIds": [],
+      "reason": "StartLogging restores rather than disables audit logging."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000013",
+      "expectedRuleIds": ["AWS-S3-001"],
+      "reason": "The bucket policy allows the public principal to read objects."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000014",
+      "expectedRuleIds": [],
+      "reason": "The bucket policy grants access to one named AWS account, not the public."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000015",
+      "expectedRuleIds": ["AWS-NET-001"],
+      "reason": "SSH port 22 is opened to 0.0.0.0/0."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000016",
+      "expectedRuleIds": [],
+      "reason": "Public HTTPS is not a management-port finding under this rule."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000017",
+      "expectedRuleIds": ["AWS-IAM-002"],
+      "reason": "The inline role policy allows every action on every resource."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000018",
+      "expectedRuleIds": [],
+      "reason": "The inline role policy is limited to reading one bucket."
+    }
+  ]
+}

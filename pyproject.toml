@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloudsec-copilot"
+version = "0.1.0"
+description = "Auditable AWS cloud-security incident analysis service"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi[standard]>=0.139.2,<0.140",
+  "SQLAlchemy>=2.0.51,<2.1",
+  "psycopg[binary]>=3.3.4,<3.4",
+  "openai>=2.46.0,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<0.29",
+  "pytest>=9.1.1,<10",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]

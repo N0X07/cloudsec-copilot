@@ -1,0 +1,228 @@
+{
+  "Records": [
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "IAMUser",
+        "arn": "arn:aws:iam::111122223333:user/platform-admin"
+      },
+      "eventTime": "2026-07-21T01:00:00Z",
+      "eventSource": "cloudtrail.amazonaws.com",
+      "eventName": "StopLogging",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "192.0.2.40",
+      "userAgent": "aws-cli/2.0",
+      "requestParameters": {"name": "organization-trail"},
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000011",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "IAMUser",
+        "arn": "arn:aws:iam::111122223333:user/platform-admin"
+      },
+      "eventTime": "2026-07-21T01:05:00Z",
+      "eventSource": "cloudtrail.amazonaws.com",
+      "eventName": "StartLogging",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "192.0.2.40",
+      "userAgent": "aws-cli/2.0",
+      "requestParameters": {"name": "organization-trail"},
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000012",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "AssumedRole",
+        "arn": "arn:aws:sts::111122223333:assumed-role/storage-admin/session-1"
+      },
+      "eventTime": "2026-07-21T01:10:00Z",
+      "eventSource": "s3.amazonaws.com",
+      "eventName": "PutBucketPolicy",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "198.51.100.20",
+      "userAgent": "aws-sdk-python/1.0",
+      "requestParameters": {
+        "bucketName": "example-public-assets",
+        "bucketPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::example-public-assets/*"
+          }]
+        }
+      },
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000013",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "AssumedRole",
+        "arn": "arn:aws:sts::111122223333:assumed-role/storage-admin/session-2"
+      },
+      "eventTime": "2026-07-21T01:15:00Z",
+      "eventSource": "s3.amazonaws.com",
+      "eventName": "PutBucketPolicy",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "198.51.100.20",
+      "userAgent": "aws-sdk-python/1.0",
+      "requestParameters": {
+        "bucketName": "example-private-data",
+        "bucketPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"AWS": "arn:aws:iam::444455556666:root"},
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::example-private-data/*"
+          }]
+        }
+      },
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000014",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "IAMUser",
+        "arn": "arn:aws:iam::111122223333:user/network-admin"
+      },
+      "eventTime": "2026-07-21T01:20:00Z",
+      "eventSource": "ec2.amazonaws.com",
+      "eventName": "AuthorizeSecurityGroupIngress",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "203.0.113.50",
+      "userAgent": "aws-cli/2.0",
+      "requestParameters": {
+        "groupId": "sg-0123456789abcdef0",
+        "ipPermissions": {"items": [{
+          "ipProtocol": "tcp",
+          "fromPort": 22,
+          "toPort": 22,
+          "ipRanges": {"items": [{"cidrIp": "0.0.0.0/0"}]}
+        }]}
+      },
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000015",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "IAMUser",
+        "arn": "arn:aws:iam::111122223333:user/network-admin"
+      },
+      "eventTime": "2026-07-21T01:25:00Z",
+      "eventSource": "ec2.amazonaws.com",
+      "eventName": "AuthorizeSecurityGroupIngress",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "203.0.113.50",
+      "userAgent": "aws-cli/2.0",
+      "requestParameters": {
+        "groupId": "sg-0123456789abcdef0",
+        "ipPermissions": {"items": [{
+          "ipProtocol": "tcp",
+          "fromPort": 443,
+          "toPort": 443,
+          "ipRanges": {"items": [{"cidrIp": "0.0.0.0/0"}]}
+        }]}
+      },
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000016",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "IAMUser",
+        "arn": "arn:aws:iam::111122223333:user/iam-admin"
+      },
+      "eventTime": "2026-07-21T01:30:00Z",
+      "eventSource": "iam.amazonaws.com",
+      "eventName": "PutRolePolicy",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "192.0.2.60",
+      "userAgent": "aws-cli/2.0",
+      "requestParameters": {
+        "roleName": "application-role",
+        "policyName": "EmergencyAdmin",
+        "policyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
+        }
+      },
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000017",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    },
+    {
+      "eventVersion": "1.09",
+      "userIdentity": {
+        "type": "IAMUser",
+        "arn": "arn:aws:iam::111122223333:user/iam-admin"
+      },
+      "eventTime": "2026-07-21T01:35:00Z",
+      "eventSource": "iam.amazonaws.com",
+      "eventName": "PutRolePolicy",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "192.0.2.60",
+      "userAgent": "aws-cli/2.0",
+      "requestParameters": {
+        "roleName": "application-role",
+        "policyName": "ReadOneBucket",
+        "policyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::example-private-data/*"
+          }]
+        }
+      },
+      "responseElements": null,
+      "eventID": "00000000-0000-4000-8000-000000000018",
+      "readOnly": false,
+      "eventType": "AwsApiCall",
+      "managementEvent": true,
+      "recipientAccountId": "111122223333",
+      "eventCategory": "Management"
+    }
+  ]
+}

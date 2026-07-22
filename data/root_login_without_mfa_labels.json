@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0",
+  "sourceFile": "cloudtrail_events.json",
+  "ruleId": "AWS-IAM-001",
+  "ruleName": "Successful root console login without MFA",
+  "labels": [
+    {
+      "eventID": "00000000-0000-4000-8000-000000000001",
+      "expectedMatch": false,
+      "reason": "Successful console login with MFA by an IAM user, not the root identity."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000002",
+      "expectedMatch": false,
+      "reason": "Successful root console login with MFA."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000003",
+      "expectedMatch": true,
+      "reason": "Successful root console login where MFAUsed is No."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000004",
+      "expectedMatch": false,
+      "reason": "Root login did not succeed, so it is outside this rule's scope."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000005",
+      "expectedMatch": false,
+      "reason": "Successful console login without MFA by an IAM user, not the root identity."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000006",
+      "expectedMatch": false,
+      "reason": "S3 API activity by an assumed role, not a console login."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000007",
+      "expectedMatch": false,
+      "reason": "Root identity API activity, but the event is not ConsoleLogin."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000008",
+      "expectedMatch": true,
+      "reason": "Successful root console login where MFAUsed is No."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000009",
+      "expectedMatch": false,
+      "reason": "IAM-user console login with missing MFA metadata, not the root identity."
+    },
+    {
+      "eventID": "00000000-0000-4000-8000-000000000010",
+      "expectedMatch": false,
+      "reason": "Successful root console login with MFA."
+    }
+  ]
+}
+

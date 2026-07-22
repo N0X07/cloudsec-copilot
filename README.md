@@ -61,6 +61,103 @@ The local MVP will run with FastAPI, PostgreSQL, and Docker Compose. AWS
 deployment, Terraform, CI/CD, and cloud monitoring will be added only after the
 local detection and evaluation pipeline is reliable.
 
+## Implemented local API
+
+The current backend includes:
+
+- Idempotent import of CloudTrail-style `Records` envelopes
+- Normalized event fields plus retention of the original JSON event
+- Event listing and lookup endpoints
+- Five deterministic AWS security detection rules
+- Idempotent incident creation with evidence and human-approval metadata
+- Structured incident reports with MITRE ATT&CK context and response steps
+- Optional OpenAI Responses API analyst with two allow-listed read-only tools
+- Per-tool-call audit records, bounded agent steps, and incident-scoped access
+- One-time human approval or rejection without automatic cloud remediation
+- PostgreSQL runtime configuration and temporary SQLite test databases
+
+### Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Service health and environment |
+| `POST` | `/api/v1/events/import` | Validate and import a CloudTrail envelope |
+| `GET` | `/api/v1/events` | List stored events |
+| `GET` | `/api/v1/events/{event_id}` | Retrieve one event |
+| `POST` | `/api/v1/events/{event_id}/analyze` | Run deterministic detection |
+| `POST` | `/api/v1/events/{event_id}/analyze-all` | Run all detection rules |
+| `GET` | `/api/v1/incidents` | List generated incidents |
+| `GET` | `/api/v1/incidents/{incident_id}/report` | Build an auditable incident report |
+| `POST` | `/api/v1/incidents/{incident_id}/agent-analysis` | Run the bounded AI analyst |
+| `GET` | `/api/v1/incidents/{incident_id}/audit` | List agent and approval audit records |
+| `POST` | `/api/v1/incidents/{incident_id}/approval` | Approve or reject proposed response work |
+
+## Local development
+
+Python 3.12 or newer is required.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+The API is available at `http://localhost:8000`, with interactive documentation
+at `http://localhost:8000/docs`. Without `DATABASE_URL`, local development uses
+`sqlite:///./cloudsec.db`.
+
+Validate the labeled dataset without third-party dependencies:
+
+```powershell
+python scripts/validate_dataset.py
+```
+
+The deterministic API works without an OpenAI key. To enable the optional
+agent-analysis endpoint, copy `.env.example` to `.env`, set `OPENAI_API_KEY`,
+and load those environment variables before starting the API. The default model
+is `gpt-5.6-terra` and can be changed with `OPENAI_MODEL`.
+
+## Agent safety boundary
+
+The model can call only `get_event_context` and `get_incident_report`. Both are
+read-only, validate that requested IDs belong to the active incident, and write
+their inputs, outputs, and success state to the audit table. Raw log fields are
+explicitly marked as untrusted data. The loop stops after `MAX_AGENT_STEPS`
+(default 4, hard maximum 8), and no remediation tool is exposed to the model.
+
+Human approval changes only the incident workflow state. Even an approved
+decision is reported as `approved_not_executed`; this MVP never changes AWS
+resources.
+
+## Docker Compose
+
+Start the API and PostgreSQL together:
+
+```powershell
+docker compose up --build
+```
+
+The Compose password is intentionally development-only. Production secrets must
+come from a managed secret store and must never be committed.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` installs the project on Python 3.12, validates all
+labeled events, runs the full test suite, compiles the source tree, and builds
+the production container. It uses read-only repository permissions and never
+receives an OpenAI API key; the Agent loop is tested with a deterministic fake
+client instead of making paid external calls.
+
+## AWS deployment template
+
+[`infra/terraform`](infra/terraform) contains a cost-aware ECS Fargate, ALB,
+private RDS PostgreSQL, ECR, Secrets Manager, IAM, and CloudWatch deployment.
+Database credentials are generated and managed by RDS instead of entering
+Terraform variables. The OpenAI key is optional and referenced only by the ARN
+of a separately created secret. See the infrastructure README for the two-stage
+image bootstrap, cost warning, TLS option, and teardown procedure.
+
 ## Security principles
 
 - Deterministic rules remain the source of truth for the initial detections.
@@ -74,11 +171,14 @@ local detection and evaluation pipeline is reliable.
 ## Milestones
 
 - [x] Define project goal, MVP boundary, and security principles.
-- [ ] Create and label synthetic CloudTrail-style events.
-- [ ] Build the FastAPI ingestion endpoint and PostgreSQL schema.
-- [ ] Implement the first rule: root login without MFA.
-- [ ] Add automated tests for ingestion and detection.
-- [ ] Add AI analyst tools and structured incident reports.
+- [x] Create and label synthetic CloudTrail-style events.
+- [ ] Build and verify the FastAPI ingestion endpoint and PostgreSQL schema.
+- [x] Implement and verify the first rule: root login without MFA.
+- [x] Expand to five labeled AWS security detection rules.
+- [x] Generate evidence-backed incident reports with ATT&CK mappings.
+- [ ] Run automated tests for ingestion and detection.
+- [x] Add bounded AI analyst tools and per-call audit records.
+- [x] Add a one-time human approval/rejection workflow.
 - [ ] Add playbook retrieval and evaluation.
 - [ ] Containerize and deploy to AWS with Terraform and CI/CD.
 - [ ] Publish architecture, results, and a short demonstration video.
@@ -92,6 +192,11 @@ unapproved cloud actions.
 
 ## Current status
 
-Milestone 1 is complete. The next step is to create a small, labeled event set
-containing normal activity and the first suspicious scenario.
-
+The ingestion API, database models, five detection rules, incident persistence,
+structured reports, bounded AI analyst, audit trail, approval workflow, Docker
+configuration, CI, AWS Terraform template, and API tests are implemented. All
+five rules have been verified against 18 labeled events; Agent policy and
+infrastructure security invariants also have dependency-free tests. Full API,
+PostgreSQL, Terraform-provider, and live-model integration tests remain pending
+until remote CI or an unrestricted local environment is available. No AWS
+resources have been created by this repository.
