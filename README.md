@@ -1,9 +1,16 @@
 # CloudSec Copilot
 
+[![CI](https://github.com/N0X07/cloudsec-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/N0X07/cloudsec-copilot/actions/workflows/ci.yml)
+
 CloudSec Copilot is a portfolio project that turns AWS security events into
 auditable incident reports. It combines deterministic detection rules with a
 tool-using AI analyst, while keeping every high-risk action behind explicit
 human approval.
+
+It is deliberately not an unrestricted "chat with your logs" wrapper. Rules
+remain the source of truth, evidence is stored before conclusions are produced,
+AI tools are read-only and incident-scoped, and approval never triggers an
+automatic AWS change.
 
 ## Problem
 
@@ -15,51 +22,47 @@ uncontrolled changes to cloud resources.
 
 ## MVP scope
 
-The first usable version will:
+The implemented MVP can:
 
 1. Import synthetic AWS CloudTrail-style JSON events.
 2. Normalize and store the events in PostgreSQL.
 3. Detect at least five suspicious event patterns with deterministic rules.
 4. Let an AI analyst call allow-listed tools to collect supporting evidence.
-5. Retrieve relevant response guidance from a small playbook knowledge base.
+5. Attach rule-specific response guidance to each incident report.
 6. Produce a structured incident report with severity, confidence, evidence,
    ATT&CK mapping, and recommended actions.
 7. Require human approval before any simulated remediation action.
 8. Record every analysis, tool call, and approval decision in an audit log.
 
-## Initial detection scenarios
+## Implemented detection scenarios
 
 - Root account login without MFA
 - CloudTrail logging disabled
 - Public S3 bucket configuration
 - Risky security-group ingress on port 22 or 3389
 - IAM privilege escalation or policy modification
-- Repeated failed authentication attempts
 
-## Planned architecture
+## Architecture
 
-```text
-CloudTrail-style events
-        |
-        v
-Ingestion API -> PostgreSQL -> Rule engine -> Incident
-                                      |
-                                      v
-                              AI analyst tools
-                              /      |       \
-                         event    identity   playbook
-                         search    context    search
-                              \      |       /
-                                      v
-                         Structured incident report
-                                      |
-                                      v
-                         Human approval + audit log
+```mermaid
+flowchart LR
+    events["CloudTrail-style events"] --> api["FastAPI ingestion API"]
+    api --> db[("PostgreSQL / SQLite")]
+    db --> rules["Deterministic rule engine"]
+    rules --> incident["Evidence-backed incident"]
+    incident --> report["Structured report<br/>severity · evidence · ATT&CK"]
+    incident --> agent["Bounded AI analyst"]
+    agent --> tools["Two allow-listed<br/>read-only tools"]
+    tools --> audit[("Audit log")]
+    agent --> report
+    report --> approval["One-time human decision"]
+    approval --> safe["approved_not_executed<br/>no AWS mutation"]
+    approval --> audit
 ```
 
-The local MVP will run with FastAPI, PostgreSQL, and Docker Compose. AWS
-deployment, Terraform, CI/CD, and cloud monitoring will be added only after the
-local detection and evaluation pipeline is reliable.
+The local runtime uses FastAPI, PostgreSQL, and Docker Compose. The repository
+also includes CI and a cost-aware Terraform deployment template for ECS
+Fargate, ALB, private RDS, ECR, Secrets Manager, IAM, and CloudWatch.
 
 ## Implemented local API
 
@@ -118,6 +121,52 @@ agent-analysis endpoint, copy `.env.example` to `.env`, set `OPENAI_API_KEY`,
 and load those environment variables before starting the API. The default model
 is `gpt-5.6-terra` and can be changed with `OPENAI_MODEL`.
 
+## Five-minute demo
+
+The reliable interview demo uses deterministic detection first and keeps the
+live model optional. Start Docker Desktop, then double-click
+[`demo-cloudsec.cmd`](demo-cloudsec.cmd) on Windows, or run:
+
+```powershell
+.\scripts\demo.ps1 -Approve -OpenDocs
+```
+
+The demo automatically:
+
+1. Builds and starts the API and PostgreSQL with Docker Compose.
+2. Imports all 18 labeled, synthetic CloudTrail-style events idempotently.
+3. Contrasts a malicious `StopLogging` event with a benign `StartLogging`
+   event.
+4. Generates an evidence-backed incident report with ATT&CK context.
+5. Records a human approval and proves that remediation remains
+   `approved_not_executed`.
+6. Prints the final audit trail and opens Swagger UI.
+
+If Docker Hub is unavailable, use the equivalent offline-friendly local demo:
+
+```powershell
+.\demo-local.cmd
+```
+
+It runs the same API and workflow with the repository's Python environment and
+a local SQLite database, without pulling container images. Swagger remains
+available until `stop-local-demo.cmd` is run. Docker Compose remains the
+production-like local path for demonstrating PostgreSQL and containerization.
+The local launcher uses `http://127.0.0.1:8000` explicitly to avoid Windows
+IPv6 `localhost` resolution differences.
+
+Use `-Reset` when a completely fresh local demo database is required. This
+deletes only the Docker Compose demo volume. Use `-IncludeAgent` only after
+setting `OPENAI_API_KEY` in the current shell; the key is never printed by the
+script.
+
+Recommended live narration:
+
+- event `...0011` disables CloudTrail and matches `AWS-LOG-001`;
+- event `...0012` restores logging and produces no finding;
+- the report cites stored evidence rather than model intuition;
+- human approval changes workflow state but never mutates AWS resources.
+
 ## Agent safety boundary
 
 The model can call only `get_event_context` and `get_incident_report`. Both are
@@ -172,16 +221,19 @@ image bootstrap, cost warning, TLS option, and teardown procedure.
 
 - [x] Define project goal, MVP boundary, and security principles.
 - [x] Create and label synthetic CloudTrail-style events.
-- [ ] Build and verify the FastAPI ingestion endpoint and PostgreSQL schema.
+- [x] Build and verify the FastAPI ingestion endpoint and PostgreSQL schema.
 - [x] Implement and verify the first rule: root login without MFA.
 - [x] Expand to five labeled AWS security detection rules.
 - [x] Generate evidence-backed incident reports with ATT&CK mappings.
-- [ ] Run automated tests for ingestion and detection.
+- [x] Run automated tests for ingestion and detection.
 - [x] Add bounded AI analyst tools and per-call audit records.
 - [x] Add a one-time human approval/rejection workflow.
 - [ ] Add playbook retrieval and evaluation.
-- [ ] Containerize and deploy to AWS with Terraform and CI/CD.
-- [ ] Publish architecture, results, and a short demonstration video.
+- [x] Containerize the service and add GitHub Actions CI.
+- [x] Add a secure AWS Terraform deployment template.
+- [ ] Deploy to a live AWS account with an explicit cost budget.
+- [x] Publish architecture, labeled results, and a repeatable local demo.
+- [ ] Record a short demonstration video.
 
 ## MVP completion criteria
 
@@ -196,7 +248,16 @@ The ingestion API, database models, five detection rules, incident persistence,
 structured reports, bounded AI analyst, audit trail, approval workflow, Docker
 configuration, CI, AWS Terraform template, and API tests are implemented. All
 five rules have been verified against 18 labeled events; Agent policy and
-infrastructure security invariants also have dependency-free tests. Full API,
-PostgreSQL, Terraform-provider, and live-model integration tests remain pending
-until remote CI or an unrestricted local environment is available. No AWS
-resources have been created by this repository.
+infrastructure security invariants also have dependency-free tests. GitHub
+Actions validates the labeled datasets, API tests, source compilation,
+production container build, Terraform validation, and Terraform formatting.
+Live-model evaluation and a real AWS deployment remain intentionally pending.
+No AWS resources have been created by this repository.
+
+## Honest limitations
+
+- The included events are synthetic and cover a deliberately bounded rule set.
+- The AI path requires an external API key and is not the source of truth.
+- Approval is simulated; there is no automatic remediation tool.
+- Terraform is a reviewed deployment template, not evidence of a live AWS
+  production deployment.
