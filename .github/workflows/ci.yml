@@ -32,6 +32,22 @@ jobs:
       - name: Validate infrastructure security invariants
         run: python scripts/validate_infrastructure.py
 
+      - name: Validate demo PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          $path = Join-Path $PWD "scripts/demo.ps1"
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            $path,
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List
+            exit 1
+          }
+
       - name: Run tests
         run: python -m pytest
 
