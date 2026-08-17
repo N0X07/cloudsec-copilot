@@ -7,7 +7,7 @@ This configuration creates a cost-aware portfolio environment in AWS:
 - PostgreSQL RDS instance in two private database subnets
 - RDS-managed master password in Secrets Manager
 - ECR repository with immutable tags and scan-on-push
-- CloudWatch logs, container insights, health checks, and rollback
+- CloudWatch logs, container insights, ALB/ECS alarms, health checks, and rollback
 - Least-privilege task and execution IAM roles
 
 Fargate tasks use public IP addresses for outbound package/API access, but their
@@ -57,10 +57,23 @@ Prerequisites: Terraform, Docker, AWS CLI, and authenticated AWS credentials.
    terraform plan -out cloudsec.tfplan
    terraform apply cloudsec.tfplan
    terraform output application_url
+   terraform output cloudwatch_log_group_name
+   terraform output alb_5xx_alarm_name
    ```
 
 The first full apply can take several minutes while RDS starts. The application
 creates its initial schema on startup.
+
+## Operations checks
+
+After deployment, run the local health-check helper against the ALB URL:
+
+```powershell
+python scripts/ops_healthcheck.py --url "$(terraform output -raw application_url)/health" --expected-environment demo
+```
+
+CloudWatch alarms are created for ALB 5XX responses and ECS running task count.
+Use `docs/runbook.md` for the first triage pass before changing infrastructure.
 
 ## Optional OpenAI key
 

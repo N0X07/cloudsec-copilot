@@ -5,6 +5,22 @@ auditable incident reports. It combines deterministic detection rules with a
 tool-using AI analyst, while keeping every high-risk action behind explicit
 human approval.
 
+When this repository is pushed to GitHub, add the Actions badge for
+`.github/workflows/ci.yml` near the top of this README.
+
+## What this demonstrates
+
+- FastAPI security-event ingestion, deterministic detection rules, and incident
+  reporting
+- Docker containerization and GitHub Actions test/build workflow
+- AWS Terraform template for ECS Fargate, ALB, RDS, ECR, Secrets Manager, IAM,
+  CloudWatch logs, and CloudWatch alarms
+- `cloudsecctl` platform CLI for health checks, incident listing, infrastructure
+  validation, and Kubernetes checks
+- Linux operations script, SLO notes, first-response runbook, and Kubernetes
+  failure-drill documentation
+- Local Kubernetes validation with Docker Desktop and kind
+
 ## Problem
 
 Cloud security logs are detailed but time-consuming to investigate. Analysts
@@ -36,30 +52,43 @@ The first usable version will:
 - IAM privilege escalation or policy modification
 - Repeated failed authentication attempts
 
-## Planned architecture
+## Architecture
 
-```text
-CloudTrail-style events
-        |
-        v
-Ingestion API -> PostgreSQL -> Rule engine -> Incident
-                                      |
-                                      v
-                              AI analyst tools
-                              /      |       \
-                         event    identity   playbook
-                         search    context    search
-                              \      |       /
-                                      v
-                         Structured incident report
-                                      |
-                                      v
-                         Human approval + audit log
+![CloudSec Copilot architecture](docs/assets/architecture.png)
+
+```mermaid
+flowchart TD
+    events["CloudTrail-style events"] --> api["FastAPI ingestion API"]
+    api --> db[("SQLite / PostgreSQL")]
+    db --> rules["Deterministic rule engine"]
+    rules --> incident["Incident record"]
+    incident --> report["Structured incident report"]
+    incident --> agent["Bounded AI analyst"]
+    agent --> tools["Allow-listed read-only tools"]
+    tools --> audit["Audit log"]
+    report --> approval["Human approval workflow"]
+    approval --> audit
+
+    subgraph platform["Platform / DevOps layer"]
+        cli["cloudsecctl CLI"]
+        docker["Docker / Compose"]
+        k8s["Kubernetes manifests"]
+        tf["Terraform AWS template"]
+        obs["CloudWatch alarms / SLO / runbook"]
+    end
+
+    cli --> api
+    cli --> k8s
+    cli --> tf
+    docker --> api
+    k8s --> api
+    tf --> api
+    obs --> cli
 ```
 
-The local MVP will run with FastAPI, PostgreSQL, and Docker Compose. AWS
-deployment, Terraform, CI/CD, and cloud monitoring will be added only after the
-local detection and evaluation pipeline is reliable.
+Local development can run with FastAPI and SQLite or Docker Compose with
+PostgreSQL. The AWS path uses Terraform. The Kubernetes path uses Docker
+Desktop with kind/minikube for local platform validation.
 
 ## Implemented local API
 
@@ -75,8 +104,29 @@ The current backend includes:
 - Per-tool-call audit records, bounded agent steps, and incident-scoped access
 - One-time human approval or rejection without automatic cloud remediation
 - PostgreSQL runtime configuration and temporary SQLite test databases
+- `cloudsecctl` CLI for platform-style operational checks
+- Zero-dependency operations health-check scripts and first-response runbook
+- Kubernetes manifests with ConfigMap, Secret example, Service, Deployment,
+  resource limits, and readiness/liveness probes
+- SLO and Kubernetes failure-drill notes
 
-### Endpoints
+## Platform CLI
+
+Install the project in editable mode, then use `cloudsecctl`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+cloudsecctl health --expected-environment development
+cloudsecctl incidents list --base-url http://localhost:8000
+cloudsecctl validate-infra
+cloudsecctl k8s-check
+cloudsecctl k8s-check --cluster --verbose
+```
+
+The CLI wraps the same checks used by scripts and docs, so it works as a small
+platform-operations entry point instead of a collection of disconnected commands.
+
+## API Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -113,6 +163,25 @@ Validate the labeled dataset without third-party dependencies:
 python scripts/validate_dataset.py
 ```
 
+Run the same style of health check an operator would use during triage:
+
+```powershell
+python scripts/ops_healthcheck.py --url http://localhost:8000/health --expected-environment development
+```
+
+On Linux hosts or inside a container shell, run the broader operations check:
+
+```sh
+APP_URL=http://localhost:8000/health EXPECTED_ENV=development sh scripts/ops_check.sh
+```
+
+The same checks are also available through the CLI:
+
+```powershell
+cloudsecctl health --expected-environment development
+cloudsecctl validate-infra
+```
+
 The deterministic API works without an OpenAI key. To enable the optional
 agent-analysis endpoint, copy `.env.example` to `.env`, set `OPENAI_API_KEY`,
 and load those environment variables before starting the API. The default model
@@ -141,13 +210,63 @@ docker compose up --build
 The Compose password is intentionally development-only. Production secrets must
 come from a managed secret store and must never be committed.
 
+## Kubernetes manifests
+
+[`k8s/base`](k8s/base) contains local Kubernetes manifests for kind/minikube:
+Namespace, ConfigMap, Secret example, Deployment, Service, resource
+requests/limits, a non-root pod security context, and `/health` readiness and
+liveness probes. See [`docs/kubernetes.md`](docs/kubernetes.md) for deployment
+and troubleshooting commands.
+
+Local kind validation has been completed:
+
+```powershell
+docker build --tag cloudsec-copilot:dev .
+kind load docker-image cloudsec-copilot:dev --name cloudsec
+kubectl apply -k k8s/base
+kubectl -n cloudsec-copilot rollout status deployment/cloudsec-copilot-api
+cloudsecctl health --url http://localhost:8000/health --expected-environment kubernetes-local
+```
+
+Failure drills are documented in [`docs/k8s-failure-drill.md`](docs/k8s-failure-drill.md).
+
+## Evidence screenshots
+
+These screenshots are generated from the current local project state with
+`scripts/generate_readme_assets.py`.
+
+![cloudsecctl validate-infra output](docs/assets/validate-infra.png)
+
+![pytest output](docs/assets/pytest.png)
+
+![kubectl get pods and services output](docs/assets/kubectl-pods.png)
+
+## SLO and operations docs
+
+- [`docs/slo.md`](docs/slo.md): availability target, latency target, error
+  budget, and triage mapping.
+- [`docs/deployment.md`](docs/deployment.md): local, Docker Compose,
+  Kubernetes, AWS Terraform deployment and rollback steps.
+- [`docs/configuration.md`](docs/configuration.md): environment variables,
+  secrets, ConfigMap/Secret, Compose, and Terraform configuration management.
+- [`docs/observability.md`](docs/observability.md): latency, traffic, errors,
+  saturation, CloudWatch, and Kubernetes signals.
+- [`docs/runbook.md`](docs/runbook.md): ALB 5XX, ECS task down, RDS connection
+  failure, evidence capture, and escalation boundary.
+- [`docs/kubernetes.md`](docs/kubernetes.md): kind/minikube deployment and
+  kubectl troubleshooting commands.
+- [`docs/k8s-failure-drill.md`](docs/k8s-failure-drill.md): ImagePullBackOff,
+  probe failure, config missing, and service access drills.
+- [`CHANGELOG.md`](CHANGELOG.md): release-style project history.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` installs the project on Python 3.12, validates all
-labeled events, runs the full test suite, compiles the source tree, and builds
-the production container. It uses read-only repository permissions and never
-receives an OpenAI API key; the Agent loop is tested with a deterministic fake
-client instead of making paid external calls.
+labeled events, checks infrastructure security and monitoring invariants, runs
+the full test suite, compiles the source tree, and builds the production
+container. It uses read-only repository permissions and never receives an
+OpenAI API key; the Agent loop is tested with a deterministic fake client
+instead of making paid external calls.
 
 ## AWS deployment template
 
@@ -156,7 +275,9 @@ private RDS PostgreSQL, ECR, Secrets Manager, IAM, and CloudWatch deployment.
 Database credentials are generated and managed by RDS instead of entering
 Terraform variables. The OpenAI key is optional and referenced only by the ARN
 of a separately created secret. See the infrastructure README for the two-stage
-image bootstrap, cost warning, TLS option, and teardown procedure.
+image bootstrap, cost warning, TLS option, CloudWatch alarm outputs, and
+teardown procedure. [`docs/runbook.md`](docs/runbook.md) documents first-pass
+triage for ALB 5XX errors, ECS task failures, and RDS connection issues.
 
 ## Security principles
 
@@ -180,6 +301,12 @@ image bootstrap, cost warning, TLS option, and teardown procedure.
 - [x] Add bounded AI analyst tools and per-call audit records.
 - [x] Add a one-time human approval/rejection workflow.
 - [ ] Add playbook retrieval and evaluation.
+- [x] Add operations health-check scripts, CloudWatch alarms, and runbook.
+- [x] Add Kubernetes manifests and kubectl troubleshooting notes.
+- [x] Add `cloudsecctl` platform CLI.
+- [x] Add SLO and Kubernetes failure-drill documentation.
+- [x] Add deployment, configuration, observability, changelog, and Mermaid
+  architecture docs.
 - [ ] Containerize and deploy to AWS with Terraform and CI/CD.
 - [ ] Publish architecture, results, and a short demonstration video.
 
@@ -194,9 +321,11 @@ unapproved cloud actions.
 
 The ingestion API, database models, five detection rules, incident persistence,
 structured reports, bounded AI analyst, audit trail, approval workflow, Docker
-configuration, CI, AWS Terraform template, and API tests are implemented. All
-five rules have been verified against 18 labeled events; Agent policy and
-infrastructure security invariants also have dependency-free tests. Full API,
-PostgreSQL, Terraform-provider, and live-model integration tests remain pending
-until remote CI or an unrestricted local environment is available. No AWS
-resources have been created by this repository.
+configuration, CI, AWS Terraform template, CloudWatch alarms, operations
+health-check scripts, Kubernetes manifests, runbook, and API tests are
+implemented. All five rules have been verified against 18 labeled events; Agent
+policy and infrastructure security/monitoring/Kubernetes invariants also have
+dependency-free tests. The Kubernetes manifests have also been validated locally
+with Docker Desktop and kind. Full PostgreSQL, Terraform-provider, live-model,
+and AWS integration tests remain pending until the required runtime environment
+is available. No AWS resources have been created by this repository.

@@ -26,3 +26,18 @@ output "service_deployed" {
   description = "False until a non-empty container_image is supplied."
   value       = var.container_image != ""
 }
+
+output "cloudwatch_log_group_name" {
+  description = "Application log group for ECS tasks."
+  value       = aws_cloudwatch_log_group.api.name
+}
+
+output "alb_5xx_alarm_name" {
+  description = "CloudWatch alarm for ALB 5XX responses."
+  value       = aws_cloudwatch_metric_alarm.alb_5xx.alarm_name
+}
+
+output "ecs_running_tasks_alarm_name" {
+  description = "CloudWatch alarm for ECS running task count. Null until the service is deployed."
+  value       = var.container_image == "" ? null : aws_cloudwatch_metric_alarm.ecs_running_tasks[0].alarm_name
+}

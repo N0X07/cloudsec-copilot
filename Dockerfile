@@ -11,6 +11,7 @@ RUN groupadd --system cloudsec \
 
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY scripts ./scripts
 
 RUN python -m pip install --no-cache-dir . \
     && chown -R cloudsec:cloudsec /app

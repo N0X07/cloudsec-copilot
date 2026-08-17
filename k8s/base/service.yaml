@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudsec-copilot-api
+  namespace: cloudsec-copilot
+  labels:
+    app.kubernetes.io/name: cloudsec-copilot
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cloudsec-copilot
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

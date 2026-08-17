@@ -21,9 +21,12 @@ dev = [
   "pytest>=9.1.1,<10",
 ]
 
+[project.scripts]
+cloudsecctl = "app.cli:main"
+
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-include = ["app*"]
+include = ["app*", "scripts*"]
