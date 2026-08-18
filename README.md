@@ -5,8 +5,6 @@ auditable incident reports. It combines deterministic detection rules with a
 tool-using AI analyst, while keeping every high-risk action behind explicit
 human approval.
 
-When this repository is pushed to GitHub, add the Actions badge for
-`.github/workflows/ci.yml` near the top of this README.
 
 ## What this demonstrates
 
